@@ -1,10 +1,10 @@
 
-app = {
-  'key_1' : 'value_1',
-  'key_2' : 'value_2',
-  'key_3' : 'value_3',
-  'key_4' : 'value_4'
-}
+var app = [{
+  users_1: [],
+}]
+
 for (x in app){
-  console.log(Object.keys(app[x]));
+  app[x].users_1.push('hello');
+  app[x].user_2 = 'hii';
 }
+console.log(app);

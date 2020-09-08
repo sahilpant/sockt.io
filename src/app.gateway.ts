@@ -3,6 +3,7 @@ import { Socket, Server } from 'socket.io';
 import { v4 as uuid } from 'uuid';
 import * as sharedSession from 'express-socket.io-session'
 import * as session from 'express-session'
+import { NotificationType } from './app/app.interface';
 
 @WebSocketGateway({namespace:'/chat'})
 export class AppGateway  implements OnGatewayConnection , OnGatewayDisconnect {
@@ -13,6 +14,7 @@ export class AppGateway  implements OnGatewayConnection , OnGatewayDisconnect {
 	private user_timestamp = {};
 	private user_check = {} //client.id : true if user is in a room false if user has left the room
 	private room_status = {} //room.id : true if game has been started in that room
+	private games = [] // gameid and other user details
 
 	@WebSocketServer() wss: Server
 
@@ -21,6 +23,8 @@ export class AppGateway  implements OnGatewayConnection , OnGatewayDisconnect {
 		client.emit('welcome',`welcome to the server`);
 		const pos = this.rooms.findIndex((room) => { return room.players == 1 || room.players == 0});
 		if(pos != -1 && (this.room_status[this.rooms[pos].room] != true)){
+			const game_pos = this.games.findIndex((room) => { return room.room == this.rooms[pos].room});
+			this.games[game_pos].users.push(client.id);
 			this.user_timestamp[client.id] = Date.now();
 			this.handleJoin( client, this.rooms[pos].room);
 			this.rooms[pos].players++;
@@ -29,21 +33,22 @@ export class AppGateway  implements OnGatewayConnection , OnGatewayDisconnect {
 		else{
 			this.user_timestamp[client.id] = Date.now();
 			this.handleJoinFirstTime(client);
-			console.log(`---------------------------------------`);
+			// console.log(`---------------------------------------`);
 
-			const sessionGame = session({
-				secret: "my-secret",
-				resave: true,
-				saveUninitialized: true
-			});
+			// const sessionGame = session({
+			// 	secret: "my-secret",
+			// 	resave: true,
+			// 	saveUninitialized: true
+			// });
 			
 
-			  this.wss.use(sharedSession(sessionGame, {
-				  gameid:this.users[client.id],
-				  autoSave:true
-			  }))
+			//   this.wss.use(sharedSession(sessionGame, {
+			// 	  gameid:this.users[client.id],
+			// 	  autoSave:true
+			//   }))
 		}
-		console.log(this.wss.sockets[client.id].handshake);
+		// console.log(this.wss.sockets[client.id].handshake);
+		console.log(NotificationType[1])
 	}
 
 
@@ -182,6 +187,20 @@ export class AppGateway  implements OnGatewayConnection , OnGatewayDisconnect {
 		console.log(this.custom_id);
 		console.log(` room_id : Game status in the room`);
 		console.log(this.room_status);
+		console.log('games');
+		console.log(this.games);
 		console.log(`--------------------------------------------`)
+	}
+
+	@SubscribeMessage('creategame')
+	handleCreateGame(client:Socket): void{
+		this.games.push({
+			GameId: uuid(),
+			users: [client.id],
+			timestamp: this.user_timestamp[client.id],
+			status:this.room_status,
+			room: this.users[client.id],
+			Moves: '',
+		})
 	}
 }
